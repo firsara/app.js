@@ -1,7 +1,8 @@
-/* 
- * App.js
- * 
- * Copyright (c) 2011 Fabian Irsara - all rights reserved
+/*!
+ * app.js Javascript Library v0.9
+ *
+ * Copyright (c) 2011 Fabian Irsara
+ * Licensed under the GPL Version 2 licenses.
  * 
  * Provides prototypal inheritence of self-defined Classes
  * Parsing Classes
@@ -9,8 +10,11 @@
  * including Plugins and Stylesheets Dynamically
  */
 
-var App = (function (self, window) {
+var app = (function (self, window) {
 	"use strict";
+	
+	self.VERSION = 0.9;
+	self.NAME = 'app';
 	
 	self.MINIFY_JS = false;
 	self.CACHE = false;
@@ -22,15 +26,10 @@ var App = (function (self, window) {
 	var importedClassesCount = 0;
 	
 	
-	// global superclass of all custon Classes
 	var SuperClass = function () {
 		this.self = this;
 		this.priv = {};
 	};
-	SuperClass.prototype.priv = {};
-	SuperClass.prototype.getSelf = function () {
-		return this;
-	}
 	
 	
 	// Private Functions
@@ -38,8 +37,6 @@ var App = (function (self, window) {
 	
 	
 	
-	
-	self.__inheriting__ = {};
 	
 	
 	// Abstract Class Definition
@@ -193,6 +190,9 @@ var App = (function (self, window) {
 	};
 	
 	
+	
+	
+	
 	// Stolen from CoffeeScript! (inherit from SuperClass)
 	//----------------------------------------------------
 	var __hasProp = Object.prototype.hasOwnProperty;
@@ -259,8 +259,6 @@ var App = (function (self, window) {
 			{
 				self.extendClass(className, definition.superClass);
 				gotClass(definition.className);
-				//if (importedClasses[definition.superClass].prototypes) importedClasses[definition.superClass].prototypes.call(self);
-				//if (definition.prototypes) definition.prototypes.call(self);
 				if (definition.callback) { definition.callback.call(self, null); }
 			}
 			else
@@ -304,7 +302,7 @@ var App = (function (self, window) {
 	};
 	
 	
-	// .indexOf for IE
+	// Array.indexOf for IE
 	//----------------
 	inArray = function(array, element)
   {
@@ -370,7 +368,7 @@ var App = (function (self, window) {
 				if (runFile) {
 					script.text = data;
 					// TODO: crop eventual .js, and base-dir + timestamp if set
-					if (data.indexOf('App.defineClass(') === -1) { gotClass(scriptUID); }
+					if (data.indexOf(self.NAME + '.defineClass(') === -1) { gotClass(scriptUID); }
 				}
 				if (success) { success.call(self, data); }
 			}
@@ -578,6 +576,7 @@ var App = (function (self, window) {
 		
 		
 		// Head Definitions;
+
 		this.pkg = null; // Package
 		this.imports = []; // Class Imports
 		this.includes = []; // Plugin Includes
@@ -598,6 +597,8 @@ var App = (function (self, window) {
 		
 		this.publicStaticFct = []; // Public Static Functions
 		this.publicStaticVar = []; // Public Static Vars
+		this.privateStaticFct = []; // Private Static Functions
+		this.privateStaticVar = []; // Private Static Vars
 		
 		
 		
@@ -610,8 +611,6 @@ var App = (function (self, window) {
 		// correct static statements
 		this.string = this.string.replace(/static public/g, 'public static');
 		this.string = this.string.replace(/static private/g, 'private static');
-		this.string = this.string.replace(/private static/g, 'public static');
-		this.string = this.string.replace(/public static/g, 'static');
 		
 		// remove "const" due to problems in older browsers
 		this.string = this.string.replace(/const /g, 'var ');
@@ -620,12 +619,12 @@ var App = (function (self, window) {
 		
 		
 		var i;
-		this.isStaticClass = (this.string.indexOf('static class') >= 0),
+		this.isStaticClass = (this.string.indexOf('public static class') >= 0),
 		this.hasSuperClass = (this.string.indexOf(' extends ') >= 0),
 		this.hasPackage = (this.string.indexOf('package ') >= 0);
 		
 		
-		var targetClassType = (this.isStaticClass === true ? 'static class' : 'public class');
+		var targetClassType = (this.isStaticClass === true ? 'public static class' : 'public class');
 		
 		
 		
@@ -675,21 +674,20 @@ var App = (function (self, window) {
 		var forceSuperConstructor = (this.constructorFct.found === true && this.hasSuperClass === true);
 		
 		
-		// NOTE: check error with "static"
-		//this.string = this.string.replace(/static/g, 'public');
-		
-		
 		// Fetch Statics
 		//--------------
-		while (this.string.indexOf('static var ') >= 0) { this.publicStaticVar.push( this.parseVar('static') ); }
-		while (this.string.indexOf('static function ') >= 0)  { this.publicStaticFct.push( this.parseFunction('static') ); }
+		while (this.string.indexOf('public static var ') >= 0)        { this.publicStaticVar.push( this.parseVar('public static') ); }
+		while (this.string.indexOf('public static function ') >= 0)   { this.publicStaticFct.push( this.parseFunction('public static') ); }
+		
+		while (this.string.indexOf('private static var ') >= 0)       { this.privateStaticVar.push( this.parseVar('private static') ); }
+		while (this.string.indexOf('private static function ') >= 0)  { this.privateStaticFct.push( this.parseFunction('private static') ); }
 		
 		
 		// Fetch Vars
 		//-----------
-		while (this.string.indexOf('public var ') >= 0) { this.publicVar.push( this.parseVar('public') ); }
+		while (this.string.indexOf('public var ') >= 0)  { this.publicVar.push( this.parseVar('public') ); }
 		while (this.string.indexOf('private var ') >= 0) { this.privateVar.push( this.parseVar('private') ); }
-		while (this.string.indexOf('super var ') >= 0) { this.superVar.push( this.parseVar('super') ); }
+		while (this.string.indexOf('super var ') >= 0)   { this.superVar.push( this.parseVar('super') ); }
 		
 		
 		// Fetch Functions
@@ -732,10 +730,12 @@ var App = (function (self, window) {
 		
 		var nextPublicIndex = functionBody.substring(20).indexOf( 'public ' ) + 20; // jump over ">public< function" -> search argument
 		var nextPrivateIndex = functionBody.substring(20).indexOf( 'private ' ) + 20; // jump over ">private< function" -> search argument
+		var nextStaticIndex = functionBody.substring(20).indexOf( 'static ' ) + 20; // jump over ">static< function" -> search argument
 		if (nextPublicIndex <= 20) { nextPublicIndex = (Number.MAX_VALUE || Math.pow( 2, 50 )); }
 		if (nextPrivateIndex <= 20) { nextPrivateIndex = (Number.MAX_VALUE || Math.pow( 2, 50 )); }
+		if (nextStaticIndex <= 20) { nextStaticIndex = (Number.MAX_VALUE || Math.pow( 2, 50 )); }
 		
-		var functionEndIndex = Math.min(nextPublicIndex, nextPrivateIndex, (functionBody.lastIndexOf('}') + 1));
+		var functionEndIndex = Math.min(nextPublicIndex, nextPrivateIndex, nextStaticIndex, (functionBody.lastIndexOf('}') + 1));
 		
 		functionBody = functionBody.substring(0, functionEndIndex);
 		
@@ -839,6 +839,20 @@ var App = (function (self, window) {
 		
 		classBody += parser.className + " = (function () {";
 			classBody += '"use strict";';
+			
+			// Private Static Functions
+			for (i = 0; i < parser.privateStaticFct.length; i++)
+			{
+				classBody += 'var ' + parser.privateStaticFct[i].name + ' = function(' + parser.privateStaticFct[i].args + ') {';
+					classBody += parser.privateStaticFct[i].body;
+				classBody += '};';
+			}
+			
+			// Private Static Vars
+			for (i = 0; i < parser.privateStaticVar.length; i++)
+			{
+				classBody += 'var ' + parser.privateStaticVar[i].name + ' = ' + parser.privateStaticVar[i].value + ';';
+			}
 			
 			
 			// Public Variables
@@ -975,11 +989,11 @@ var App = (function (self, window) {
 			
 			
 			// fetching styles
-			for (i = 0; i < parser.styles.length; i++) { classBody += "App.style('"+parser.styles[i]+"');"; }
+			for (i = 0; i < parser.styles.length; i++) { classBody += self.NAME + ".style('"+parser.styles[i]+"');"; }
 			
-			// Append App-Class-Definition
+			// Append app-Class-Definition
 			//----------------------------
-			classBody += "App.defineClass({";
+			classBody += self.NAME + ".defineClass({";
 				classBody += "className: '"+parser.qualifiedClassName.replace(/\./g, '/')+"'";
 				classBody += ", classConstructor: "+parser.className;
 				classBody += ", superClass: '"+parser.superClass.replace(/\./g, '/')+"'";
@@ -1072,7 +1086,7 @@ var App = (function (self, window) {
 	}
 	
 	
-	// prototypes for App-Class
+	// prototypes for app-Class
 	String.prototype.trim = function() {
 		var str = this.replace(/^\s\s*/, ''),
 			ws = /\s/,
