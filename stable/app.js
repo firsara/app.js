@@ -1,5 +1,8 @@
+var app, ClassParser;
+
+
 /*!
- * app.js Javascript Library v0.9
+ * app.js Javascript Library v0.9.1
  *
  * Copyright (c) 2011 Fabian Irsara
  * Licensed under the GPL Version 2 licenses.
@@ -10,10 +13,10 @@
  * including Plugins and Stylesheets Dynamically
  */
 
-var app = (function (self, window) {
+app = (function (self, window) {
 	"use strict";
 	
-	self.VERSION = 0.9;
+	self.VERSION = 0.91;
 	self.NAME = 'app';
 	
 	self.MINIFY_JS = false;
@@ -35,7 +38,7 @@ var app = (function (self, window) {
 	// Private Functions
 	var AJAX, include, searchHeadElement, appendHeadElement, checkRequirements, inArray, checkForClass, gotClass, internalParse;
 	
-	
+	var document = window.document;
 	
 	
 	
@@ -73,22 +76,21 @@ var app = (function (self, window) {
 	
 	// Include a new Stylesheet
 	//-------------------------
-	self.style = function( CSSSource, callback ) {
-		CSSSource = CSSSource.trim();
-		var styleUID = CSSSource;
+	self.style = function( link, callback ) {
+		link = link.trim();
 		
-		if (!CSSSource.endsWith( '.css' ) && self.BASE_PATH !== '') { CSSSource = self.BASE_PATH + CSSSource + '.css'; }
+		if (!link.endsWith( '.css' ) && self.BASE_PATH !== '') { link = self.BASE_PATH + link + '.css'; }
 		if (!self.CACHE) {
-			if (CSSSource.indexOf('?') !== -1) { CSSSource += '&'; } else { CSSSource += '?'; }
-			CSSSource += 't=' + new Date().getTime();
+			if (link.indexOf('?') !== -1) { link += '&'; } else { link += '?'; }
+			link += 't=' + new Date().getTime();
 		}
 		
-		if ( searchHeadElement('link', {'data-includemodule': styleUID}) ) {
+		if ( searchHeadElement('link', {'data-includemodule': link}) ) {
 			if (callback) { callback.call(self, null); }
 			return;
 		}
 		
-		appendHeadElement('link', {'class': 'style-includemodule', 'data-includemodule': styleUID, 'rel': 'stylesheet', type: 'text/css', 'charset': 'utf-8', href: CSSSource});
+		appendHeadElement('link', {'class': 'style-includemodule', 'data-includemodule': link, 'rel': 'stylesheet', type: 'text/css', 'charset': 'utf-8', href: link});
 	};
 	
 	
@@ -136,7 +138,7 @@ var app = (function (self, window) {
 	
 	// Require a List of Classes / Scripts
 	//------------------------------------
-	self.requires = function(dependencies, callback, failureCallback) {
+	self.requires = self.require = self.js = function(dependencies, callback, failureCallback) {
 		if (!(dependencies instanceof Array)) { dependencies = [dependencies]; }
 		
 		var loadDependency, dependencyNotFound, loaded = -1;
@@ -198,35 +200,34 @@ var app = (function (self, window) {
 	var __hasProp = Object.prototype.hasOwnProperty;
 	
 	self.__extend = function(child, parent) {
-  	var store = {prototypes: {}, statics: {}}, k;
-  	for (k in child) store.statics[k] = child[k];
-  	for (k in child.prototype) store.prototypes[k] = child.prototype[k];
+		var store = {prototypes: {}, statics: {}}, k;
+		for (k in child) { if (k !== 'indexOf') { store.statics[k] = child[k]; } }
+		for (k in child.prototype) { if (k !== 'indexOf') { store.prototypes[k] = child.prototype[k]; } }
 		
-		for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; }
+		for (var key in parent) { if (__hasProp.call(parent, key)) { child[key] = parent[key]; } }
 		
 		function Ctor() { this.constructor = child; this.self = this; }
-    Ctor.prototype = parent.prototype;
-    child.prototype = new Ctor();
-    child.__super__ = parent.prototype;
-    
-  	for (k in store.statics) child[k] = store.statics[k];
-  	for (k in store.prototypes) child.prototype[k] = store.prototypes[k];
-  	
-  	return child;
+		Ctor.prototype = parent.prototype;
+		child.prototype = new Ctor();
+		child.__super__ = parent.prototype;
+		
+		for (k in store.statics) { if (k !== 'indexOf') { child[k] = store.statics[k]; } }
+		for (k in store.prototypes) { if (k !== 'indexOf') { child.prototype[k] = store.prototypes[k]; } }
+		
+		return child;
 	};
 	
   self.extendClass = function (childClass, parentClass, callback) {
-  	
 		var child = importedClasses[childClass].classConstructor;
 		var parent = importedClasses[parentClass].classConstructor;
 		
 		self.__extend(child, parent);
 		
     child.__extend__ = function(instance, arg) {
-    	child.__super__.constructor.apply(instance, arg);
+			child.__super__.constructor.apply(instance, arg);
     };
     
-    if (callback) callback.call(this);
+    if (callback) { callback.call(this); }
     
     return child;
   };
@@ -362,7 +363,7 @@ var app = (function (self, window) {
 				if (success) { success.call(self, data); }
 			} else if ( data.indexOf(' class ') !== -1 ) {
 				if (success) { success.call( self, data ); }
-				console.log(scriptUID);
+				//console.log(scriptUID);
 				script.text = self.parseClass( data );
 			} else {
 				if (runFile) {
@@ -473,91 +474,6 @@ var app = (function (self, window) {
 	};
 	
 	
-	
-	
-	
-	/*
-	 * Parsing JSClass-File
-	 * 
-	 * Features:
-	 * 
-	 * // Set Class Package
-	 * 
-	 *  - #package net;
-	 * 
-	 * // Import Another Class
-	 * 
-	 *  - #import net.URLHandler;
-	 *    
-	 * 
-	 * 
-	 * // Include another Script without parsing, i.e. Plugins
-	 * 
-	 *  - #include js/otherscript.js;
-	 *    
-	 * 
-	 * 
-	 * // Include a Stylesheet dynamically when needed
-	 * 
-	 *  - #style css/stylesheet.css;
-	 *    
-	 * 
-	 * 
-	 * // Don't Require qualified Class Name for "extend" and "new" Statements
-	 * 
-	 *  - #use net.URLHandler;
-	 *    
-	 * 
-	 * 
-	 * // Define Class Name,
-	 * // Optionally extending another Class by Using Qualified-Name (e.g. extends events.Dispatcher)
-	 * // Optionally setting Class to "static" (means that it gets self executed and defines an instance, i.e. Main.instance = new Main();)
-	 * // Constructor Function has to have same name as Class
-	 * 
-	 *  - public °static° class *ClassName* °extends *OtherClass*°
-	 * 
-	 * 
-	 * 
-	 * // Define Variable (either "private", "public" or "public static") or const
-	 * // NOTE: must end with a semicolon!
-	 * // NOTE: can only be accessed with this.*varName*
-	 * 
-	 *  - public var *varName* °=*value*°;
-	 *  - private var *varName* °=*value*°;
-	 *  - public static var *varName* °=*value*°;
-	 * 
-	 * 
-	 * 
-	 * // Define Variable (either "private", "public" or "public static")
-	 * // NOTE: can only be accessed with this.*functionName*
-	 * 
-	 *  - public function *functionName*(*args*)
-	 *  - private function *functionName*(*args*)
-	 *  - public static function *functionName*(*args*)
-	 * 
-	 * 
-	 * 
-	 * // Call Super Constructor or Super Statement
-	 * // NOTE: Functions get overridden! (means you cannot access its overridden super-Function)
-	 * 
-	 *  - super(); // call Super Constructor!
-	 *  - super.addEventListener(... // call Function from Super-Class, that was not overridden! (optionally: self.addEventListener(...
-	 * 
-	 * 
-	 * 
-	 * NOTES:
-	 * 
-	 * 
-	 * TODO:
-	 * 
-	 * - Statics Require Qualified Class Name in Front or specific Keyword like self::*Function*
-	 * - Include a System to inherit overridden Functions and call them from instance-Object
-	 * 
-	 * - Check for parsing errors?
-	 * 
-	 */
-	
-	
 	self.parseClass = self.parse = function( data )
 	{
 		if (!(data instanceof Array)) { data = [data]; }
@@ -568,10 +484,177 @@ var app = (function (self, window) {
 	};
 	
 	
-	
-	
-	var ClassParser = function(str)
+	internalParse = function( data )
 	{
+		var parser = new ClassParser( data );
+		return parser.parse();
+	};
+	
+	
+	
+	if (!(window.console) || !(window.console.log)) {
+		window.console = {};
+		window.console.log = function () {};
+	}
+	
+	if (!Function.prototype.bind) { // check if native implementation available
+		Function.prototype.bind = function(){ 
+			var fn = this, args = Array.prototype.slice.call(arguments), object = args.shift(); 
+			return function(){
+				return fn.apply(object, args.concat(Array.prototype.slice.call(arguments))); 
+			};
+		};
+	}
+	
+	
+	// prototypes for app-Class
+	String.prototype.trim = function() {
+		var str = this.replace(/^\s\s*/, ''),
+			ws = /\s/,
+			i = str.length;
+		do { i--; } while (ws.test(str.charAt(i)));
+		return str.slice(0, i + 1);
+	};
+	
+	String.prototype.endsWith = function( str ) {
+		return (this.substring( this.length - str.length ) === str);
+	};
+	
+	
+	
+	// LOAD STARTUP SCRIPT
+	
+	var scripts = (document.getElementsByTagName('script'));
+	var mainScript = null, cache, minify, dir;
+	
+	for (var i = 0; i < scripts.length; i++)
+	{
+		cache = scripts[i].getAttribute('data-cache');
+		minify = scripts[i].getAttribute('data-minify');
+		dir = scripts[i].getAttribute('data-dir');
+		if (cache && cache.toString().toLowerCase() === 'true') { self.CACHE = true; }
+		if (minify && minify.toString().toLowerCase() === 'true') { self.MINIFY_JS = true; }
+		if (dir) { self.BASE_PATH = scripts[i].getAttribute('data-dir'); }
+		
+		if (scripts[i].getAttribute('data-main'))
+		{
+			mainScript = scripts[i].getAttribute('data-main');
+			if (scripts[i].getAttribute('data-dir')) { self.BASE_PATH = scripts[i].getAttribute('data-dir'); }
+			else { self.BASE_PATH = mainScript.substring( 0, mainScript.lastIndexOf('/') + 1 ); }
+			if ((mainScript.substring( mainScript.length - 3 ) !== '.js') && (mainScript.indexOf(self.BASE_PATH) === 0)) { mainScript = mainScript.substring(self.BASE_PATH.length); }
+		}
+	}
+	
+	if (mainScript) { self.requires(mainScript); }
+	
+
+	return self;
+	
+	
+}({}, window));
+
+
+/*!
+ * app.classparser.js Javascript Library v0.9.1
+ *
+ * Copyright (c) 2011 Fabian Irsara
+ * Licensed under the GPL Version 2 licenses.
+ * 
+ * Provides prototypal inheritence of self-defined Classes
+ * Parsing Classes
+ */
+
+
+	/*
+	* Parsing JSClass-File
+	* 
+	* Features:
+	* 
+	* // Set Class Package
+	* 
+	*  - #package net;
+	* 
+	* // Import Another Class
+	* 
+	*  - #import net.URLHandler;
+	*    
+	* 
+	* 
+	* // Include another Script without parsing, i.e. Plugins
+	* 
+	*  - #include js/otherscript.js;
+	*    
+	* 
+	* 
+	* // Include a Stylesheet dynamically when needed
+	* 
+	*  - #style css/stylesheet.css;
+	*    
+	* 
+	* 
+	* // Don't Require qualified Class Name for "extend" and "new" Statements
+	* 
+	*  - #use net.URLHandler;
+	*    
+	* 
+	* 
+	* // Define Class Name,
+	* // Optionally extending another Class by Using Qualified-Name (e.g. extends events.Dispatcher)
+	* // Optionally setting Class to "static" (means that it gets self executed and defines an instance, i.e. Main.instance = new Main();)
+	* // Constructor Function has to have same name as Class
+	* 
+	*  - public °static° class *ClassName* °extends *OtherClass*°
+	* 
+	* 
+	* 
+	* // Define Variable (either "private", "public" or "public static") or const
+	* // NOTE: must end with a semicolon!
+	* // NOTE: can only be accessed with this.*varName*
+	* 
+	*  - public var *varName* °=*value*°;
+	*  - private var *varName* °=*value*°;
+	*  - public static var *varName* °=*value*°;
+	* 
+	* 
+	* 
+	* // Define Variable (either "private", "public" or "public static")
+	* // NOTE: can only be accessed with this.*functionName*
+	* 
+	*  - public function *functionName*(*args*)
+	*  - private function *functionName*(*args*)
+	*  - public static function *functionName*(*args*)
+	* 
+	* 
+	* 
+	* // Call Super Constructor or Super Statement
+	* // NOTE: Functions get overridden! (means you cannot access its overridden super-Function)
+	* 
+	*  - super(); // call Super Constructor!
+	*  - super.addEventListener(... // call Function from Super-Class, that was not overridden! (optionally: self.addEventListener(...
+	* 
+	* 
+	* 
+	* NOTES:
+	* 
+	* 
+	* TODO:
+	* 
+	* - Statics Require Qualified Class Name in Front or specific Keyword like self::*Function*
+	* - Include a System to inherit overridden Functions and call them from instance-Object
+	* 
+	* - Check for parsing errors?
+	* 
+	*/
+
+ClassParser = (function (APP_JS, window) {
+	"use strict";
+	
+	function ClassParser(str)
+	{
+		// Pre-Replace "$"-Sign to match "$" in Regular Expressions
+		str = str.replace(new RegExp("\\$", "g"), "__DOLLAR__");
+		
+		
 		this.string = str;
 		
 		
@@ -615,13 +698,12 @@ var app = (function (self, window) {
 		// remove "const" due to problems in older browsers
 		this.string = this.string.replace(/const /g, 'var ');
 		
-		
+		this.isStaticClass = (this.string.indexOf('public static class') >= 0);
+		this.hasSuperClass = (this.string.indexOf(' extends ') >= 0);
+		this.hasPackage = (this.string.indexOf('package ') >= 0);
 		
 		
 		var i;
-		this.isStaticClass = (this.string.indexOf('public static class') >= 0),
-		this.hasSuperClass = (this.string.indexOf(' extends ') >= 0),
-		this.hasPackage = (this.string.indexOf('package ') >= 0);
 		
 		
 		var targetClassType = (this.isStaticClass === true ? 'public static class' : 'public class');
@@ -705,7 +787,7 @@ var app = (function (self, window) {
 		}
 		
 		return this;
-	};
+	}
 	
 	ClassParser.prototype.toString = function() { return this.string; };
 	ClassParser.prototype.valueOf = function() { return this.string; };
@@ -724,7 +806,7 @@ var app = (function (self, window) {
 		var functionStartIndex = this.string.indexOf( functionType + (name ? ' ' + name : '' ));
 		
 		// no function found
-		if (functionStartIndex === -1) return fct;
+		if (functionStartIndex === -1) { return fct; }
 		
 		var functionBody = this.string.substring( functionStartIndex );
 		
@@ -765,7 +847,7 @@ var app = (function (self, window) {
 		var varEndIndex = varSubstr.indexOf(';') + 1;
 		
 		// no var found
-		if (varStartIndex === -1) return v;
+		if (varStartIndex === -1) { return v; }
 		
 		var varStr = varSubstr.substring( 0, varEndIndex );
 		var hasValue = varStr.indexOf('=') !== -1;
@@ -776,7 +858,7 @@ var app = (function (self, window) {
 		v.value = ( hasValue === false ? '' : varStr.substring(varStr.indexOf('=')) ).replace('=', '').replace(';', '').trim();
 		v.found = true;
 		
-		if (v.value === '') v.value = 'null';
+		if (v.value === '') { v.value = 'null'; }
 		
 		this.string = this.string.replace(v.str, '');
 		
@@ -786,7 +868,7 @@ var app = (function (self, window) {
 	ClassParser.prototype.fetchResource = function(type)
 	{
 		var index = this.string.indexOf( type );
-		if (index === -1) return '';
+		if (index === -1) { return ''; }
 		
 		var resource = this.string.substring( index );
 		resource = resource.substring( 0, resource.indexOf(';') + 1 );
@@ -795,15 +877,10 @@ var app = (function (self, window) {
 		return resource.replace(type, '').replace(';', '').replace(/\'/g, '').replace(/\"/g, '').trim();
 	};
 	
-	
-	internalParse = function( data )
+	ClassParser.prototype.parse = function()
 	{
-		// Pre-Replace "$"-Sign to match "$" in Regular Expressions
-		data = data.replace(new RegExp("\\$", "g"), "__DOLLAR__");
-		//data = data.replace(/private/g, 'public');
-		
 		var i, j, classBody = '';
-		var parser = new ClassParser( data );
+		var parser = this;
 		
 		var privates = parser.privateVar.concat(parser.privateFct);
 		var publics = parser.publicVar.concat(parser.publicFct);
@@ -866,7 +943,6 @@ var app = (function (self, window) {
 			
 			// Constructor
 			classBody += 'function ' + parser.className + '('+parser.constructorFct.args+') {';
-				//classBody += parser.className + '.__extend__(this, arguments);';
 				classBody += parser.className + '.__super__.constructor.apply(this, arguments);';
 				classBody += 'var self = this.self;';
 				classBody += 'var priv = self.priv;';
@@ -877,32 +953,16 @@ var app = (function (self, window) {
 				{
 					classBody += 'priv.' + parser.privateVar[i].name + ' = ' + parser.privateVar[i].value + ';';
 				}
-				
-				// Public Variables
-				for (i = 0; i < parser.publicVar.length; i++)
-				{
-					//classBody += 'this.' + parser.publicVar[i].name + ' = ' + parser.publicVar[i].value + ';';
-				}
 			
 				
 
 				// Private Functions
 				for (i = 0; i < parser.privateFct.length; i++)
 				{
-					// Correcting Private var and Function Calls
-					//for (j = 0; j < privates.length; j++) {
-						//parser.privateFct[i].body = parser.privateFct[i].body.replace(new RegExp('this.' + privates[j].name, 'g'), 'priv.' + privates[j].name);
-					//}
-					
 					classBody += 'priv.' + parser.privateFct[i].name + ' = function('+parser.privateFct[i].args+') {';
 						classBody += parser.privateFct[i].body;
 						//classBody += 'return this;';
-					classBody += '};'
-				}
-				
-				// Correcting Private var and Function Calls
-				for (j = 0; j < privates.length; j++) {
-					//parser.constructorFct.body = parser.constructorFct.body.replace(new RegExp('this.' + privates[j].name, 'g'), 'priv.' + privates[j].name);
+					classBody += '};';
 				}
 				
 				
@@ -913,51 +973,34 @@ var app = (function (self, window) {
 			classBody += '}';
 			
 			
-			// Create Prototypes after Extending Class
-			//classBody += parser.className + '.createPrototypes = function() {';
 				
-				//classBody += 'console.log("prototypes: '+parser.qualifiedClassName+'");';
-				
-				
-				// Public Prototype Functions
-				for (i = 0; i < parser.publicFct.length; i++)
-				{
-					// Correcting Private var and Function Calls
-					for (j = 0; j < privates.length; j++) {
-						//parser.publicFct[i].body = parser.publicFct[i].body.replace(new RegExp('this.' + privates[j].name, 'g'), 'this.priv.' + privates[j].name);
-					}
-					
-					classBody += parser.className + '.prototype.' + parser.publicFct[i].name + ' = function('+parser.publicFct[i].args+'){';
-						classBody += 'var self = this.self;';
-						classBody += 'var priv = this.priv;';
-						classBody += parser.publicFct[i].body;
-						//classBody += 'return this;';
-					classBody += '};';
-				}
-				
-				// Public Static Vars
-				for (i = 0; i < parser.publicStaticVar.length; i++)
-				{
-					classBody += parser.className + '.' + parser.publicStaticVar[i].name + ' = ' + parser.publicStaticVar[i].value + ';';
-				}
-				
-				// Public Static Functions
-				for (i = 0; i < parser.publicStaticFct.length; i++)
-				{
-					classBody += parser.className + '.' + parser.publicStaticFct[i].name + ' = function('+parser.publicStaticFct[i].args+'){';
-						classBody += parser.publicStaticFct[i].body;
-						//classBody += 'return '+parser.className+';';
-					classBody += '};';
-				}
-				
-				
-			// ENDOF Create Prototypes after Extending Class
-			//classBody += '};';
+			// PUBLIC PROTOTYPE FUNCTIONS
+			for (i = 0; i < parser.publicFct.length; i++)
+			{
+				classBody += parser.className + '.prototype.' + parser.publicFct[i].name + ' = function('+parser.publicFct[i].args+'){';
+					classBody += 'var self = this.self;';
+					classBody += 'var priv = this.priv;';
+					classBody += parser.publicFct[i].body;
+					//classBody += 'return this;';
+				classBody += '};';
+			}
 			
-			// Correcting Private var and Function Calls
-			//for (i = 0; i < privates.length; i++) {
-				//classBody = classBody.replace(new RegExp('this.' + privates[i].name, 'g'), 'priv.' + privates[i].name);
-			//}
+			// Public Static Vars
+			for (i = 0; i < parser.publicStaticVar.length; i++)
+			{
+				classBody += parser.className + '.' + parser.publicStaticVar[i].name + ' = ' + parser.publicStaticVar[i].value + ';';
+			}
+			
+			// Public Static Functions
+			for (i = 0; i < parser.publicStaticFct.length; i++)
+			{
+				classBody += parser.className + '.' + parser.publicStaticFct[i].name + ' = function('+parser.publicStaticFct[i].args+'){';
+					classBody += parser.publicStaticFct[i].body;
+					//classBody += 'return '+parser.className+';';
+				classBody += '};';
+			}
+				
+				
 			
 			classBody = classBody.replace(/\s\(/g, '(');
 			classBody = classBody.replace(/\(\s\)/g, '()');
@@ -989,17 +1032,17 @@ var app = (function (self, window) {
 			
 			
 			// fetching styles
-			for (i = 0; i < parser.styles.length; i++) { classBody += self.NAME + ".style('"+parser.styles[i]+"');"; }
+			for (i = 0; i < parser.styles.length; i++) { classBody += APP_JS.NAME + ".style('"+parser.styles[i]+"');"; }
 			
 			// Append app-Class-Definition
 			//----------------------------
-			classBody += self.NAME + ".defineClass({";
+			classBody += APP_JS.NAME + ".defineClass({";
 				classBody += "className: '"+parser.qualifiedClassName.replace(/\./g, '/')+"'";
 				classBody += ", classConstructor: "+parser.className;
 				classBody += ", superClass: '"+parser.superClass.replace(/\./g, '/')+"'";
 				classBody += ", imports: ["+classImports.join(', ')+"]";
 				classBody += ", plugins: ["+classIncludes.join(', ')+"]";
-				if (!self.DEFINES_CLASSES) { classBody += ", skipImports: true"; }
+				if (!APP_JS.DEFINES_CLASSES) { classBody += ", skipImports: true"; }
 				if (parser.isStaticClass) { classBody += ",callback: function(){ new " + parser.className + "(); }"; }
 				//classBody += ",prototypes: "+parser.className +".createPrototypes";
 			classBody += "});\n";
@@ -1043,12 +1086,12 @@ var app = (function (self, window) {
 		
 		
 		// NOTE: Forcing Strict Equality!!
-		classBody = classBody.replace(/==/g, '===');
-		classBody = classBody.replace(/====/g, '===');
-		classBody = classBody.replace(/====/g, '===');
-		classBody = classBody.replace(/!=/g, '!==');
-		classBody = classBody.replace(/!===/g, '!==');
-		classBody = classBody.replace(/!===/g, '!==');
+		//classBody = classBody.replace(new RegExp('==', 'g'), '===');
+		//classBody = classBody.replace(new RegExp('====', 'g'), '===');
+		//classBody = classBody.replace(new RegExp('====', 'g'), '===');
+		//classBody = classBody.replace(new RegExp('!=', 'g'), '!==');
+		//classBody = classBody.replace(new RegExp('!===', 'g'), '!==');
+		//classBody = classBody.replace(new RegExp('!===', 'g'), '!==');
 		
 		
 		
@@ -1056,78 +1099,16 @@ var app = (function (self, window) {
 		// Add Semicolons at the end of each Function definition
 		// to ensure no JS-Errors when running the minified Script
 		// Remove Whitespace and eventual double semicolons!
-		if (self.MINIFY_JS) {
+		if (APP_JS.MINIFY_JS) {
 			classBody = classBody.replace(/function /g, ';function ');
 			classBody = classBody.replace(/\n|\t/g, '');
 			while (classBody.indexOf(';;') >= 0) { classBody = classBody.replace(/;;/g, ';'); }
 		} else {
-			try { classBody = js_beautify(classBody,{'indent_size': 2, 'indent_char': ' ', 'preserve_newlines': false}); } catch(e){}
+			try { classBody = window.js_beautify(classBody,{'indent_size': 2, 'indent_char': ' ', 'preserve_newlines': false}); } catch(e){}
 		}
 		
 		return classBody;
 	};
 	
-	
-	
-	if (!(window.console) || !(window.console.log)) {
-		window.console = {};
-		window.console.log = function () {};
-	}
-	
-	if (!Function.prototype.bind) { // check if native implementation available
-	  Function.prototype.bind = function(){ 
-	    var fn = this, args = Array.prototype.slice.call(arguments),
-	        object = args.shift(); 
-	    return function(){ 
-	      return fn.apply(object, 
-	        args.concat(Array.prototype.slice.call(arguments))); 
-	    }; 
-	  };
-	}
-	
-	
-	// prototypes for app-Class
-	String.prototype.trim = function() {
-		var str = this.replace(/^\s\s*/, ''),
-			ws = /\s/,
-			i = str.length;
-		do { i--; } while (ws.test(str.charAt(i)));
-		return str.slice(0, i + 1);
-	};
-	
-	String.prototype.endsWith = function( str ) {
-		return (this.substring( this.length - str.length ) === str);
-	};
-	
-	
-	
-	// LOAD STARTUP SCRIPT
-	
-	var scripts = (document.getElementsByTagName('script'));
-	var mainScript = null, cache, minify, dir;
-	
-	for (var i = 0; i < scripts.length; i++)
-	{
-		cache = scripts[i].getAttribute('data-cache');
-		minify = scripts[i].getAttribute('data-minify');
-		dir = scripts[i].getAttribute('data-dir');
-		if (cache && cache.toString().toLowerCase() === 'true') { self.CACHE = true; }
-		if (minify && minify.toString().toLowerCase() === 'true') { self.MINIFY_JS = true; }
-		if (dir) { self.BASE_PATH = scripts[i].getAttribute('data-dir'); }
-		
-		if (scripts[i].getAttribute('data-main'))
-		{
-			mainScript = scripts[i].getAttribute('data-main');
-			if (scripts[i].getAttribute('data-dir')) { self.BASE_PATH = scripts[i].getAttribute('data-dir'); }
-			else { self.BASE_PATH = mainScript.substring( 0, mainScript.lastIndexOf('/') + 1 ); }
-			if ((mainScript.substring( mainScript.length - 3 ) !== '.js') && (mainScript.indexOf(self.BASE_PATH) === 0)) { mainScript = mainScript.substring(self.BASE_PATH.length); }
-		}
-	}
-	
-	if (mainScript) { self.requires(mainScript); }
-	
-
-	return self;
-	
-	
-}({}, window));
+	return ClassParser;
+}(app, window));
