@@ -217,20 +217,20 @@ app = (function (self, window) {
 		return child;
 	};
 	
-  self.extendClass = function (childClass, parentClass, callback) {
+	self.extendClass = function (childClass, parentClass, callback) {
 		var child = importedClasses[childClass].classConstructor;
 		var parent = importedClasses[parentClass].classConstructor;
 		
 		self.__extend(child, parent);
 		
-    child.__extend__ = function(instance, arg) {
+		child.__extend__ = function(instance, arg) {
 			child.__super__.constructor.apply(instance, arg);
-    };
-    
-    if (callback) { callback.call(this); }
-    
-    return child;
-  };
+		};
+		
+		if (callback) { callback.call(this); }
+		
+		return child;
+	};
 	
 	
 	
