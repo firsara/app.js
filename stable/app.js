@@ -76,7 +76,7 @@ app = (function (self, window) {
 	
 	// Include a new Stylesheet
 	//-------------------------
-	self.style = function( link, callback ) {
+	self.style = self.css = function( link, callback ) {
 		link = link.trim();
 		
 		if (!link.endsWith( '.css' ) && self.BASE_PATH !== '') { link = self.BASE_PATH + link + '.css'; }
@@ -306,7 +306,7 @@ app = (function (self, window) {
 	// Array.indexOf for IE
 	//----------------
 	inArray = function(array, element)
-  {
+	{
 		var i, size = array.length;
 		for (i = 0; i < size; i++) {
 			if (array[i] === element) {
