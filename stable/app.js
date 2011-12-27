@@ -2,7 +2,7 @@ var app, ClassParser;
 
 
 /*!
- * app.js Javascript Library v0.9.1
+ * app.js Javascript Library v0.9.2
  *
  * Copyright (c) 2011 Fabian Irsara
  * Licensed under the GPL Version 2 licenses.
@@ -16,13 +16,12 @@ var app, ClassParser;
 app = (function (self, window) {
 	"use strict";
 	
-	self.VERSION = 0.91;
+	self.VERSION = 0.92;
 	self.NAME = 'app';
 	
 	self.MINIFY_JS = false;
 	self.CACHE = false;
 	self.BASE_PATH = '';
-	self.DEFINES_CLASSES = true;
 	
 	var ignoredClasses = [];
 	var importedClasses = {};
@@ -51,7 +50,6 @@ app = (function (self, window) {
 		this.imports          = [];
 		this.plugins          = [];
 		this.callback         = null;
-		this.skipImports      = false;
 		
 		for (var k in classOptions)
 		{
@@ -174,11 +172,6 @@ app = (function (self, window) {
 		}
 		importedClasses[definition.className].loadID = importedClassesCount;
 		importedClasses[definition.className].size = definition.imports.length;
-		
-		if (importedClasses[definition.className].skipImports === true)
-		{
-			self.ignore(definition.className);
-		}
 		
 		if (importedClasses[definition.className].size > 0)
 		{
@@ -555,7 +548,7 @@ app = (function (self, window) {
 
 
 /*!
- * app.classparser.js Javascript Library v0.9.1
+ * app.classparser.js Javascript Library v0.9.2
  *
  * Copyright (c) 2011 Fabian Irsara
  * Licensed under the GPL Version 2 licenses.
@@ -1042,7 +1035,6 @@ ClassParser = (function (APP_JS, window) {
 				classBody += ", superClass: '"+parser.superClass.replace(/\./g, '/')+"'";
 				classBody += ", imports: ["+classImports.join(', ')+"]";
 				classBody += ", plugins: ["+classIncludes.join(', ')+"]";
-				if (!APP_JS.DEFINES_CLASSES) { classBody += ", skipImports: true"; }
 				if (parser.isStaticClass) { classBody += ",callback: function(){ new " + parser.className + "(); }"; }
 				//classBody += ",prototypes: "+parser.className +".createPrototypes";
 			classBody += "});\n";
