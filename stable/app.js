@@ -18,6 +18,14 @@ var window = (function(){
 
 var app, ClassParser;
 
+if (module)
+{
+  module.exports = {
+    app: app
+  , parser: ClassParser
+  }
+}
+
 app = (function (window) {
   "use strict";
 
