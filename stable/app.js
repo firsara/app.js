@@ -2,10 +2,11 @@
 //@codekit-prepend 'app.classparser.js';
 
 
-if (module)
+try
 {
   module.exports = {
     app: app
   , parser: ClassParser
   };
 }
+catch(e){}
