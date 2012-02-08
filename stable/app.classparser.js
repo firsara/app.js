@@ -323,7 +323,6 @@ ClassParser = (function (APP_JS, window) {
         {
           classBody += 'priv.' + parser.privateFct[i].name + ' = function('+parser.privateFct[i].args+') {';
             classBody += parser.privateFct[i].body;
-            //classBody += 'return this;';
           classBody += '};';
         }
         
@@ -343,7 +342,6 @@ ClassParser = (function (APP_JS, window) {
           classBody += 'var self = this.self;';
           classBody += 'var priv = this.priv;';
           classBody += parser.publicFct[i].body;
-          //classBody += 'return this;';
         classBody += '};';
       }
       
@@ -358,7 +356,6 @@ ClassParser = (function (APP_JS, window) {
       {
         classBody += parser.className + '.' + parser.publicStaticFct[i].name + ' = function('+parser.publicStaticFct[i].args+'){';
           classBody += parser.publicStaticFct[i].body;
-          //classBody += 'return '+parser.className+';';
         classBody += '};';
       }
         
@@ -405,7 +402,6 @@ ClassParser = (function (APP_JS, window) {
         classBody += ", imports: ["+classImports.join(', ')+"]";
         classBody += ", plugins: ["+classIncludes.join(', ')+"]";
         if (parser.isStaticClass) { classBody += ",callback: function(){ new " + parser.className + "(); }"; }
-        //classBody += ",prototypes: "+parser.className +".createPrototypes";
       classBody += "});\n";
       
       
@@ -444,15 +440,6 @@ ClassParser = (function (APP_JS, window) {
     classBody = classBody.replace(/dispatchEvent/g, 'triggerEvent');
     classBody = classBody.replace(/addEventListener/g, 'signalConnect');
     classBody = classBody.replace(/removeEventListener/g, 'unconnectSignal');
-    
-    
-    // NOTE: Forcing Strict Equality!!
-    //classBody = classBody.replace(new RegExp('==', 'g'), '===');
-    //classBody = classBody.replace(new RegExp('====', 'g'), '===');
-    //classBody = classBody.replace(new RegExp('====', 'g'), '===');
-    //classBody = classBody.replace(new RegExp('!=', 'g'), '!==');
-    //classBody = classBody.replace(new RegExp('!===', 'g'), '!==');
-    //classBody = classBody.replace(new RegExp('!===', 'g'), '!==');
     
     
     
