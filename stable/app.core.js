@@ -10,6 +10,18 @@
 * including Plugins and Stylesheets Dynamically
 */
 
+
+if (! window)
+{
+  var window = (function(){
+    return this;
+  })();
+}
+
+
+var app, ClassParser;
+
+
 app = (function (window) {
   "use strict";
 
