@@ -270,7 +270,7 @@ app = (function (window) {
       }
       
       
-      if (definition.ready === true && importedClasses[className] && importedClasses[definition.superClass])
+      if (definition.ready === true && importedClasses[className] && importedClasses[definition.superClass] && importedClasses[definition.superClass].ready === true)
       {
         extendClass(className, definition.superClass);
         gotClass(definition.className);
