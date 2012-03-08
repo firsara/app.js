@@ -183,6 +183,10 @@ app = (function (window) {
     
     // execute Callback dependencies have loaded
     if (callback) { checkRequirements(dependencies, callback); }
+    
+    if (ASYNC !== true) {
+      return app.module;
+    }
   };
   
   
@@ -1008,6 +1012,10 @@ ClassParser = (function (APP_JS, window) {
       
       // fetching styles
       for (i = 0; i < parser.styles.length; i++) { classBody += APP_JS.NAME + ".style('"+parser.styles[i]+"');"; }
+      
+      if (APP_JS.ASYNC !== true) {
+        classBody += "app.module = "+parser.qualifiedClassName+";";
+      }
       
       // Append app-Class-Definition
       //----------------------------
