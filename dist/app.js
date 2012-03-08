@@ -26,6 +26,7 @@ app = (function (window) {
     , NAME = 'app'
     , MINIFY_JS = false
     , CACHE = false
+    , ASYNC = true
     , BASE_PATH = ''
 
     , ignoredClasses = []
@@ -468,7 +469,7 @@ app = (function (window) {
     }
     
     
-    req.onreadystatechange = function() {
+    var onReadyStateChange = function() {
       // only if req shows "loaded"
       if (req.readyState.toString() === '4') {
         // only if "OK"
@@ -480,7 +481,13 @@ app = (function (window) {
       }
     };
     
-    req.open( type, source, true );
+    if (ASYNC === true) {
+      req.onreadystatechange = onReadyStateChange;
+    } else {
+      onReadyStateChange();
+    }
+    
+    req.open( type, source, ASYNC );
     req.send();
   };
   
@@ -538,14 +545,16 @@ app = (function (window) {
   if (document)
   {
     var scripts = (document.getElementsByTagName('script'));
-    var mainScript = null, cache, minify, dir;
+    var mainScript = null, cache, async, minify, dir;
     
     for (var i = 0; i < scripts.length; i++)
     {
       cache = scripts[i].getAttribute('data-cache');
+      async = scripts[i].getAttribute('data-async');
       minify = scripts[i].getAttribute('data-minify');
       dir = scripts[i].getAttribute('data-dir');
       if (cache && cache.toString().toLowerCase() === 'true') { CACHE = true; }
+      if (async && async.toString().toLowerCase() === 'false') { ASYNC = false; }
       if (minify && minify.toString().toLowerCase() === 'true') { MINIFY_JS = true; }
       if (dir) { BASE_PATH = scripts[i].getAttribute('data-dir'); }
       
@@ -567,6 +576,7 @@ app = (function (window) {
   , NAME: NAME
   , MINIFY_JS: MINIFY_JS
   , CACHE: CACHE
+  , ASYNC: ASYNC
   , BASE_PATH: BASE_PATH
 
   , Class: Class
