@@ -483,12 +483,14 @@ app = (function (window) {
     
     if (ASYNC === true) {
       req.onreadystatechange = onReadyStateChange;
-    } else {
-      onReadyStateChange();
     }
     
     req.open( type, source, ASYNC );
     req.send();
+    
+    if (ASYNC !== true) {
+      onReadyStateChange();
+    }
   };
   
   
@@ -567,7 +569,14 @@ app = (function (window) {
       }
     }
     
-    if (mainScript) { requires(mainScript); }
+    if (mainScript) {
+      if (ASNYC === true) { requires(mainScript); }
+      else {
+        window.setTimeout(function(){
+          requires(mainScript);
+        }, 250);
+      }
+    }
   }
   
 
