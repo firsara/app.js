@@ -100,7 +100,7 @@ app = (function (window) {
   style = function( link, callback ) {
     link = link.trim();
     
-    if (!link.endsWith( '.css' ) && BASE_PATH !== '') { link = BASE_PATH + link + '.css'; }
+    if (!link.endsWith( '.css' )) { link = BASE_PATH + link + '.css'; }
     if (!CACHE) {
       if (link.indexOf('?') !== -1) { link += '&'; } else { link += '?'; }
       link += 't=' + new Date().getTime();
@@ -185,7 +185,11 @@ app = (function (window) {
     if (callback) { checkRequirements(dependencies, callback); }
     
     if (ASYNC !== true) {
-      return app.module;
+      if (!importedClasses[dependencies[0]].module) {
+        importedClasses[dependencies[0]].module = app.module;
+      }
+
+      return importedClasses[dependencies[0]].module;
     }
   };
   
@@ -361,7 +365,7 @@ app = (function (window) {
     
     if (!runFile) { runFile = true; }
     
-    if (!JSsource.endsWith('.js') && BASE_PATH !== '') {
+    if (!JSsource.endsWith('.js')) {
       JSsource = BASE_PATH + JSsource + '.js';
     }
     
